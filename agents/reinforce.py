@@ -4,6 +4,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.distributions import Categorical
 from agents.agent import BaseAgent
+from models.mlps import MLPBackbone
+from models.cnns import CNNBackbone
 
 class ReinforcePolicyGradientsAgent(BaseAgent):
     def __init__(self, env: gym.Env, wandb=None, use_cnn=False, device='cpu', lr=1e-3, gamma=0.99, max_grad_norm=0.5, entropy_coef=1e-4):
@@ -40,10 +42,10 @@ class ReinforcePolicyGradientsAgent(BaseAgent):
             # Move observation to device and ensure correct shape
             if isinstance(self.model, CNNBackbone):
                 # For CNN models 
-                obs_tensor = torch.tensor(obs, dtype=torch.float32).unsqueeze(0).to(self.device)
+                obs_tensor = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
             else:
                 # For MLP models
-                obs_tensor = torch.tensor(obs, dtype=torch.float32).unsqueeze(0).to(self.device)
+                obs_tensor = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
 
             action, log_prob, entropy = self.select_action(obs_tensor)
             obs, reward, terminated, truncated, _ = env.step(action)
