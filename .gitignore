@@ -7,9 +7,8 @@ __pycache__/
 # videos
 videos*/
 
-# checkpoints and models
+# checkpoints 
 ckpts/
-models/
 
 # wandb
 wandb/
