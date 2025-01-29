@@ -6,6 +6,7 @@ conda activate atari
 
 # Install main dependencies
 pip install gymnasium[atari,other] pettingzoo==1.24.3 stable-baselines3[extra] matplotlib numpy
+pip install swig box2d gymnasium[box2d]
 
 # Clone and install Multi-Agent-ALE
 git clone https://github.com/Farama-Foundation/Multi-Agent-ALE.git
