@@ -1,0 +1,15 @@
+# ignore the Multi-Agent-Ale folder
+Multi-Agent-Ale/
+
+# pycache
+__pycache__/
+
+# videos
+videos*/
+
+# checkpoints and models
+ckpts/
+models/
+
+# wandb
+wandb/
