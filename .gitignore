@@ -12,3 +12,10 @@ ckpts/
 
 # wandb
 wandb/
+
+# experiments
+experiments/
+
+# logs
+logs/
+*.log
