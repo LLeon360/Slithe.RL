@@ -12,6 +12,59 @@ class RewardWrapper(gym.Wrapper):
         # Add a small positive reward for surviving
         reward += self.survival_reward
         return obs, reward, terminated, truncated, info
+
+class ProgressiveRewardWrapper(gym.Wrapper):
+    '''
+    Offers a piecewise reward system based on the number of steps survived
+    '''
+    def __init__(self, env, base_survival_reward=0.0001):
+        super(ProgressiveRewardWrapper, self).__init__(env)
+        self.base_survival_reward = base_survival_reward
+        self.total_steps = 0
+        self.round_steps = 0
+        self.rounds = 0
+
+        # Define step thresholds and their corresponding rewards for survival
+        self.reward_tiers = {
+            120: self.base_survival_reward * 0.01, 
+            140: self.base_survival_reward,      # Basic survival
+            150: self.base_survival_reward * 1.5, # Mild
+            180: self.base_survival_reward * 6, # Decent performance
+            250: self.base_survival_reward * 10, # Good performance
+            float('inf'): self.base_survival_reward * 12  # Excellent
+        }
+        
+        # Store sorted thresholds once
+        self.sorted_thresholds = sorted(self.reward_tiers.keys())
+
+    def get_survival_reward(self, steps):
+        """Get the appropriate reward based on current step count"""
+        for threshold in self.sorted_thresholds:
+            if steps < threshold:
+                return self.reward_tiers[threshold]
+        return self.reward_tiers[float('inf')]
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        
+        if abs(reward) == 1:
+            self.round_steps = 0
+            self.rounds += 1
+            if reward == 1:
+                reward = 100
+                print("WON ROUND!!!!!!")
+        else:
+            survival_reward = self.get_survival_reward(self.round_steps)
+            reward += survival_reward
+            self.round_steps += 1
+        
+        self.total_steps += 1
+        return obs, reward, terminated, truncated, info
+
+    def reset(self, *args, **kwargs):
+        self.round_steps = 0
+        self.rounds = 0
+        return self.env.reset(*args, **kwargs)
     
 class ChannelFirstWrapper(gym.Wrapper):
     def __init__(self, env):
