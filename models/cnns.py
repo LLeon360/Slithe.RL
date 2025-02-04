@@ -8,13 +8,15 @@ import matplotlib.pyplot as plt
 
 class CNNBackbone(nn.Module):
     """Basic CNN for image-based observations (e.g., Atari)."""
-    def __init__(self, obs_shape=(3, 84, 84), output_dim=(6)):
+    def __init__(self, obs_shape=(3, 84, 84), output_dim=(6), hidden_dims=[512]):
         super().__init__()
         self.in_channels = obs_shape[0]
         self.features = nn.Sequential(
-            nn.Conv2d(self.in_channels, 16, kernel_size=5, stride=2),
+            nn.Conv2d(self.in_channels, 16, kernel_size=4, stride=2),
             nn.ReLU(),
-            nn.Conv2d(16, 32, kernel_size=5, stride=2),
+            nn.Conv2d(16, 32, kernel_size=3, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(32, 32, kernel_size=3, stride=1),
             nn.ReLU(),
             nn.Flatten()
         )
@@ -25,12 +27,19 @@ class CNNBackbone(nn.Module):
             self._dummy_output = self.features(self._dummy_input)
             print(f"CNN Dummy Output Shape: {self._dummy_output.shape}")  # For debugging
 
-        # FC layer after conv
-        self.fc = nn.Linear(self._dummy_output.shape[1], output_dim)
+        self.hidden_layers = nn.ModuleList()
+        input_dim = self._dummy_output.shape[1]
+        for h_dim in hidden_dims:
+            self.hidden_layers.append(nn.Linear(input_dim, h_dim))
+            self.hidden_layers.append(nn.ReLU())
+            input_dim = h_dim
+        self.hidden_layers.append(nn.Linear(input_dim, output_dim))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.features(x)
-        return self.fc(x)
+        for layer in self.hidden_layers:
+            x = layer(x)
+        return x
 
 class ResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1):
