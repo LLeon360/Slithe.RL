@@ -14,6 +14,7 @@ class ReinforcePolicyGradientsAgent(BaseAgent):
         self.gamma = gamma
         self.max_grad_norm = max_grad_norm
         self.entropy_coef = entropy_coef
+        self.total_steps = 0  # Track total steps for saving/loading
 
         if use_cnn:
             in_channels = env.observation_space.shape[0]
@@ -38,6 +39,7 @@ class ReinforcePolicyGradientsAgent(BaseAgent):
                 env.render()
                 
             steps += 1
+            self.total_steps += 1
 
             # Move observation to device and ensure correct shape
             if isinstance(self.model, CNNBackbone):
@@ -84,7 +86,8 @@ class ReinforcePolicyGradientsAgent(BaseAgent):
             "policy_loss": policy_loss.item(),
             "entropy_loss": entropy_loss.item(),
             "total_loss": loss.item(),
-            "steps": steps
+            "steps": steps,
+            "total_steps": self.total_steps
         }
 
     def select_action(self, obs):
@@ -97,3 +100,59 @@ class ReinforcePolicyGradientsAgent(BaseAgent):
     def run_episode(self, env, render=False):
         rewards, log_probs, entropies, steps = self.gather_experience(env, render)
         return self.update_policy(rewards, log_probs, entropies, steps)
+
+    def save(self, path):
+        """
+        Save the model's state, optimizer state, and training progress.
+        
+        Args:
+            path (str): Path to save the checkpoint
+        """
+        checkpoint = {
+            'model_state_dict': self.model.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'total_steps': self.total_steps,
+            'gamma': self.gamma,
+            'max_grad_norm': self.max_grad_norm,
+            'entropy_coef': self.entropy_coef,
+            'device': self.device
+        }
+        torch.save(checkpoint, path)
+
+    def load(self, path):
+        """
+        Load a saved model checkpoint.
+        
+        Args:
+            path (str): Path to the checkpoint file
+        """
+        checkpoint = torch.load(path, map_location=self.device)
+        
+        # Load model and optimizer states
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        
+        # Load training progress and hyperparameters
+        self.total_steps = checkpoint['total_steps']
+        self.gamma = checkpoint['gamma']
+        self.max_grad_norm = checkpoint['max_grad_norm']
+        self.entropy_coef = checkpoint['entropy_coef']
+        
+        # Ensure the model is on the correct device
+        self.model = self.model.to(self.device)
+
+    def get_save_state(self):
+        """
+        Returns a dictionary containing the current training state.
+        Useful for logging or debugging.
+        
+        Returns:
+            dict: Current training state
+        """
+        return {
+            'total_steps': self.total_steps,
+            'gamma': self.gamma,
+            'max_grad_norm': self.max_grad_norm,
+            'entropy_coef': self.entropy_coef,
+            'device': self.device
+        }
