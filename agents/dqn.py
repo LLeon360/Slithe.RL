@@ -79,19 +79,25 @@ class DQNAgent(BaseAgent):
         gamma=0.99,
         buffer_size=50000,
         batch_size=128,
-        target_update_freq=1000,
+        target_update_freq=1,
+        tau=0.005,
         eps_start=1.0,
         eps_end=0.02,
         eps_decay=0.995,
         hidden_dims=[128, 128],
         gradient_clip=1.0,
         double_dqn=True,
-        update_freq=1,  # How often to update (in steps)
+        update_freq=1,
         per_alpha=0.6,
         per_beta_start=0.4,
         per_beta_end=1.0,
-        per_beta_steps=100000
-    ):
+        per_beta_steps=100000,
+        # New CNN-specific parameters
+        cnn_channels=[32, 64, 64],
+        cnn_kernel_sizes=[8, 4, 3],
+        cnn_strides=[4, 2, 1]
+        ):
+        
         super().__init__(env, wandb)
         self.device = device
         self.gamma = gamma
@@ -104,22 +110,35 @@ class DQNAgent(BaseAgent):
         self.gradient_clip = gradient_clip
         self.double_dqn = double_dqn
         self.total_steps = 0
+        self.tau = tau
 
         # Initialize networks
         if use_cnn:
+            # Extract observation shape and action dimension
             in_channels = env.observation_space.shape[0]
             act_dim = env.action_space.n
+
+            # Initialize CNN backbone with configurable architecture
             self.q_network = CNNBackbone(
-                obs_shape=env.observation_space.shape, 
+                obs_shape=env.observation_space.shape,
                 output_dim=act_dim,
-                hidden_dims=hidden_dims
+                hidden_dims=hidden_dims,
+                channels=cnn_channels,
+                kernel_sizes=cnn_kernel_sizes,
+                strides=cnn_strides
             ).to(self.device)
+            
+            # Create target network with identical architecture
             self.target_network = CNNBackbone(
-                obs_shape=env.observation_space.shape, 
+                obs_shape=env.observation_space.shape,
                 output_dim=act_dim,
-                hidden_dims=hidden_dims
+                hidden_dims=hidden_dims,
+                channels=cnn_channels,
+                kernel_sizes=cnn_kernel_sizes,
+                strides=cnn_strides
             ).to(self.device)
         else:
+            # Original MLP initialization remains unchanged
             obs_dim = env.observation_space.shape[0]
             act_dim = env.action_space.n
             self.q_network = MLPBackbone(
@@ -133,11 +152,10 @@ class DQNAgent(BaseAgent):
                 hidden_dims=hidden_dims
             ).to(self.device)
 
-        # Initialize target network with same weights
+        # Rest of initialization remains the same
         self.target_network.load_state_dict(self.q_network.state_dict())
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=lr)
 
-        # Initialize prioritized replay buffer
         self.replay_buffer = PrioritizedReplayBuffer(
             size=buffer_size,
             alpha=per_alpha,
@@ -214,14 +232,19 @@ class DQNAgent(BaseAgent):
 
         # Update target network if needed
         if self.total_steps % self.target_update_freq == 0:
-            self.target_network.load_state_dict(self.q_network.state_dict())
+            # Do a soft update if tau is not 1
+            if self.tau == 1:
+                self.target_network.load_state_dict(self.q_network.state_dict())
+            else:
+                for target_param, local_param in zip(self.target_network.parameters(), self.q_network.parameters()):
+                    target_param.data.copy_(self.tau*local_param.data + (1.0-self.tau)*target_param.data)
 
         # Update beta parameter
         self.replay_buffer.update_beta(self.total_steps)
 
         return {
             "q_loss": loss.item(),
-            "avg_q_value": q_values.mean().item(),
+            "mean_q_value": q_values.mean().item(),
             "max_q_value": q_values.max().item(),
             "min_q_value": q_values.min().item(),
             "mean_td_error": td_errors.mean(),
@@ -236,7 +259,7 @@ class DQNAgent(BaseAgent):
         episode_steps = 0
         metrics_accumulator = {
             "q_loss": [],
-            "avg_q_value": [],
+            "mean_q_value": [],
             "max_q_value": [],
             "min_q_value": [],
             "mean_td_error": [],

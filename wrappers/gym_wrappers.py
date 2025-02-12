@@ -13,6 +13,22 @@ class RewardWrapper(gym.Wrapper):
         reward += self.survival_reward
         return obs, reward, terminated, truncated, info
 
+class StopOnRoundEndWrapper(gym.Wrapper):
+    '''
+    Stops at a reward threshold for multi-round games
+
+    Uses abs value for games that use negative for loss
+    '''
+    def __init__(self, env, stop_reward=1):
+        super(StopOnRoundEndWrapper, self).__init__(env)
+        self.stop_reward = stop_reward
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        if abs(reward) == self.stop_reward:
+            terminated = True
+        return obs, reward, terminated, truncated, info
+
 class ProgressiveRewardWrapper(gym.Wrapper):
     '''
     Offers a piecewise reward system based on the number of steps survived
@@ -26,11 +42,11 @@ class ProgressiveRewardWrapper(gym.Wrapper):
 
         # Define step thresholds and their corresponding rewards for survival
         self.reward_tiers = {
-            120: self.base_survival_reward * 0.01, 
-            140: self.base_survival_reward,      # Basic survival
-            150: self.base_survival_reward * 1.5, # Mild
-            180: self.base_survival_reward * 6, # Decent performance
-            250: self.base_survival_reward * 10, # Good performance
+            20: self.base_survival_reward * 0.25, 
+            70: self.base_survival_reward,      # Basic survival
+            100: self.base_survival_reward * 1.5, # Mild
+            140: self.base_survival_reward * 6, # Decent performance
+            160: self.base_survival_reward * 10, # Good performance
             float('inf'): self.base_survival_reward * 12  # Excellent
         }
         

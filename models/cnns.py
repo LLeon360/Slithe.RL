@@ -7,38 +7,67 @@ import gymnasium as gym
 import matplotlib.pyplot as plt
 
 class CNNBackbone(nn.Module):
-    """Basic CNN for image-based observations (e.g., Atari)."""
-    def __init__(self, obs_shape=(3, 84, 84), output_dim=(6), hidden_dims=[512]):
+    """
+    Configurable CNN backbone for image-based observations.
+    Parameters for channel progression, kernel sizes, and strides
+    """
+    def __init__(
+        self, 
+        obs_shape=(3, 84, 84), 
+        output_dim=6, 
+        channels=[32, 64, 64],  
+        kernel_sizes=[8, 4, 3],  
+        strides=[4, 2, 1],
+        hidden_dims=[512],  
+    ):
         super().__init__()
         self.in_channels = obs_shape[0]
-        self.features = nn.Sequential(
-            nn.Conv2d(self.in_channels, 16, kernel_size=4, stride=2),
-            nn.ReLU(),
-            nn.Conv2d(16, 32, kernel_size=3, stride=2),
-            nn.ReLU(),
-            nn.Conv2d(32, 32, kernel_size=3, stride=1),
-            nn.ReLU(),
-            nn.Flatten()
+        
+        # Validation to ensure parameter lists match in length
+        assert len(channels) == len(kernel_sizes) == len(strides), (
+            "channels, kernel_sizes, and strides must have the same length"
         )
+        
+        # Build conv layers dynamically based on parameters
+        layers = []
+        in_channels = self.in_channels
+        
+        for out_channels, kernel_size, stride in zip(channels, kernel_sizes, strides):
+            layers.extend([
+                nn.Conv2d(
+                    in_channels, 
+                    out_channels, 
+                    kernel_size=kernel_size, 
+                    stride=stride
+                ),
+                nn.ReLU()
+            ])
+            in_channels = out_channels
+            
+        layers.append(nn.Flatten())
+        self.features = nn.Sequential(*layers)
 
-        # do a forward pass to get the size of the output
-        with torch.no_grad():
-            self._dummy_input = torch.zeros(1, *obs_shape)
-            self._dummy_output = self.features(self._dummy_input)
-            print(f"CNN Dummy Output Shape: {self._dummy_output.shape}")  # For debugging
+        if hidden_dims is not None and len(hidden_dims) != 0:
+            # Compute feature output size with dummy forward pass
+            with torch.no_grad():
+                self._dummy_input = torch.zeros(1, *obs_shape)
+                self._dummy_output = self.features(self._dummy_input)
+                print(f"CNN feature output shape: {self._dummy_output.shape}")
 
-        self.hidden_layers = nn.ModuleList()
-        input_dim = self._dummy_output.shape[1]
-        for h_dim in hidden_dims:
-            self.hidden_layers.append(nn.Linear(input_dim, h_dim))
-            self.hidden_layers.append(nn.ReLU())
-            input_dim = h_dim
-        self.hidden_layers.append(nn.Linear(input_dim, output_dim))
+            # Build fully connected layers
+            self.hidden_layers = nn.ModuleList()
+            input_dim = self._dummy_output.shape[1]
+            for h_dim in hidden_dims:
+                self.hidden_layers.append(nn.Linear(input_dim, h_dim))
+                self.hidden_layers.append(nn.ReLU())
+                input_dim = h_dim
+            self.hidden_layers.append(nn.Linear(input_dim, output_dim))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.features(x)
-        for layer in self.hidden_layers:
-            x = layer(x)
+        if hasattr(self, "hidden_layers"):
+            for layer in self.hidden_layers:
+                x = layer(x)
         return x
 
 class ResidualBlock(nn.Module):

@@ -8,22 +8,53 @@ from models.mlps import MLPBackbone
 from models.cnns import CNNBackbone
 
 class ReinforcePolicyGradientsAgent(BaseAgent):
-    def __init__(self, env: gym.Env, wandb=None, use_cnn=False, device='cpu', lr=1e-3, gamma=0.99, max_grad_norm=0.5, entropy_coef=1e-4):
+    def __init__(
+            self, 
+            env: gym.Env, 
+            wandb=None, 
+            use_cnn=False, 
+            device='cpu', 
+            lr=1e-3, 
+            gamma=0.99, 
+            max_grad_norm=0.5, 
+            entropy_coef=1e-4,
+            # New CNN architecture parameters
+            cnn_channels=[32, 64, 64],        # Channel progression through layers
+            cnn_kernel_sizes=[8, 4, 3],       # Kernel size for each conv layer
+            cnn_strides=[4, 2, 1],            # Stride for each conv layer
+            hidden_dims=[512]                 # FC layer dimensions after CNN
+        ):
+        
         super().__init__(env, wandb)
         self.device = device
         self.gamma = gamma
         self.max_grad_norm = max_grad_norm
         self.entropy_coef = entropy_coef
-        self.total_steps = 0  # Track total steps for saving/loading
+        self.total_steps = 0
 
+        # Initialize the policy network based on observation type
         if use_cnn:
             in_channels = env.observation_space.shape[0]
             act_dim = env.action_space.n
-            self.model = CNNBackbone(obs_shape=env.observation_space.shape, output_dim=act_dim).to(self.device)
+            
+            # Create CNN backbone with configurable architecture
+            self.model = CNNBackbone(
+                obs_shape=env.observation_space.shape,
+                output_dim=act_dim,
+                hidden_dims=hidden_dims,
+                channels=cnn_channels,
+                kernel_sizes=cnn_kernel_sizes,
+                strides=cnn_strides
+            ).to(self.device)
         else:
+            # Standard MLP for non-image observations
             obs_dim = env.observation_space.shape[0]
             act_dim = env.action_space.n
-            self.model = MLPBackbone(obs_dim, act_dim).to(self.device)
+            self.model = MLPBackbone(
+                obs_dim, 
+                act_dim,
+                hidden_dims=hidden_dims
+            ).to(self.device)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
 
