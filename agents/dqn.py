@@ -76,6 +76,7 @@ class DQNAgent(BaseAgent):
         use_cnn=False,
         device='cpu',
         lr=1e-3,
+        weight_decay=1e-4,
         gamma=0.99,
         buffer_size=50000,
         batch_size=128,
@@ -113,48 +114,7 @@ class DQNAgent(BaseAgent):
         self.tau = tau
 
         # Initialize networks
-        if use_cnn:
-            # Extract observation shape and action dimension
-            in_channels = env.observation_space.shape[0]
-            act_dim = env.action_space.n
-
-            # Initialize CNN backbone with configurable architecture
-            self.q_network = CNNBackbone(
-                obs_shape=env.observation_space.shape,
-                output_dim=act_dim,
-                hidden_dims=hidden_dims,
-                channels=cnn_channels,
-                kernel_sizes=cnn_kernel_sizes,
-                strides=cnn_strides
-            ).to(self.device)
-            
-            # Create target network with identical architecture
-            self.target_network = CNNBackbone(
-                obs_shape=env.observation_space.shape,
-                output_dim=act_dim,
-                hidden_dims=hidden_dims,
-                channels=cnn_channels,
-                kernel_sizes=cnn_kernel_sizes,
-                strides=cnn_strides
-            ).to(self.device)
-        else:
-            # Original MLP initialization remains unchanged
-            obs_dim = env.observation_space.shape[0]
-            act_dim = env.action_space.n
-            self.q_network = MLPBackbone(
-                obs_dim, 
-                act_dim, 
-                hidden_dims=hidden_dims
-            ).to(self.device)
-            self.target_network = MLPBackbone(
-                obs_dim, 
-                act_dim, 
-                hidden_dims=hidden_dims
-            ).to(self.device)
-
-        # Rest of initialization remains the same
-        self.target_network.load_state_dict(self.q_network.state_dict())
-        self.optimizer = optim.Adam(self.q_network.parameters(), lr=lr)
+        self._initialize_model(use_cnn, hidden_dims, cnn_channels, cnn_kernel_sizes, cnn_strides, lr, weight_decay)
 
         self.replay_buffer = PrioritizedReplayBuffer(
             size=buffer_size,
@@ -163,6 +123,34 @@ class DQNAgent(BaseAgent):
             beta_end=per_beta_end,
             beta_steps=per_beta_steps
         )
+      
+    def _initialize_model(self, use_cnn, hidden_dims, cnn_channels, cnn_kernel_sizes, cnn_strides, lr, weight_decay):
+        """Common model initialization."""
+        act_dim = self.env.action_space.n
+        if use_cnn:
+            self.q_network = CNNBackbone(
+                obs_shape=self.env.observation_space.shape,
+                output_dim=act_dim,
+                hidden_dims=hidden_dims,
+                channels=cnn_channels,
+                kernel_sizes=cnn_kernel_sizes,
+                strides=cnn_strides
+            ).to(self.device)
+            self.target_network = CNNBackbone(
+                obs_shape=self.env.observation_space.shape,
+                output_dim=act_dim,
+                hidden_dims=hidden_dims,
+                channels=cnn_channels,
+                kernel_sizes=cnn_kernel_sizes,
+                strides=cnn_strides
+            ).to(self.device)
+        else:
+            obs_dim = self.env.observation_space.shape[0]
+            self.q_network = MLPBackbone(obs_dim, act_dim, hidden_dims=hidden_dims).to(self.device)
+            self.target_network = MLPBackbone(obs_dim, act_dim, hidden_dims=hidden_dims).to(self.device)
+        
+        self.target_network.load_state_dict(self.q_network.state_dict())
+        self.optimizer = optim.AdamW(self.q_network.parameters(), lr=lr, weight_decay=weight_decay)
 
     def _store_transition(self, state, action, reward, next_state, done):
         """Store transition in replay buffer"""
