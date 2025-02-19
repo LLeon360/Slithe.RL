@@ -193,8 +193,8 @@ class DQNAgent(BaseAgent):
             else:
                 next_q_values = self.target_network(next_state_batch).max(1, keepdim=True)[0]
 
-            target_q_values = reward_batch.unsqueeze(1) + \
-                            (1.0 - done_batch.unsqueeze(1)) * self.gamma * next_q_values
+            # Compute target Q values using Bellman equation, (1-done) will be 0 if done=1 True (indicating no future Q values)
+            target_q_values = reward_batch.unsqueeze(1) + (1.0 - done_batch.unsqueeze(1)) * self.gamma * next_q_values
 
         # Compute TD errors for updating priorities
         td_errors = torch.abs(current_q_values - target_q_values).detach().cpu().numpy()
