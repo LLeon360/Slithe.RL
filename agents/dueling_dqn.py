@@ -63,12 +63,16 @@ class DuelingDQNAgent(DQNAgent):
         cnn_strides=[4, 2, 1],
         mlp_feature_extractor_hidden_dims=[128, 128],
     ):
+        # Need to call this first since, super().__init__ invokes self._initialize_model, which uses this
+        self.mlp_feature_extractor_hidden_dims = mlp_feature_extractor_hidden_dims
+
         super().__init__(
             env=env,
             wandb=wandb,
             use_cnn=use_cnn,
             device=device,
             lr=lr,
+            weight_decay=weight_decay,
             gamma=gamma,
             buffer_size=buffer_size,
             batch_size=batch_size,
@@ -87,13 +91,11 @@ class DuelingDQNAgent(DQNAgent):
             per_beta_steps=per_beta_steps,
             cnn_channels=cnn_channels,
             cnn_kernel_sizes=cnn_kernel_sizes,
-            cnn_strides=cnn_strides
+            cnn_strides=cnn_strides,
         )
-        self.weight_decay = weight_decay
-        self.mlp_feature_extractor_hidden_dims = mlp_feature_extractor_hidden_dims
 
-        # Re-initialize with dueling networks
-        self._initialize_model(use_cnn, hidden_dims, cnn_channels, cnn_kernel_sizes, cnn_strides, lr, weight_decay)
+        # # Re-initialize with dueling networks
+        # self._initialize_model(use_cnn, hidden_dims, cnn_channels, cnn_kernel_sizes, cnn_strides, lr, weight_decay)
 
     def _initialize_model(self, use_cnn, hidden_dims, cnn_channels, cnn_kernel_sizes, cnn_strides, lr, weight_decay):
         """Override to create a dueling-specific Q network."""
