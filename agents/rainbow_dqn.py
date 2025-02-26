@@ -319,3 +319,73 @@ class RainbowDQNAgent(DQNAgent):
     def _soft_update_target_network(self):
         for target_param, param in zip(self.target_network.parameters(), self.q_network.parameters()):
             target_param.data.copy_(self.tau * param.data + (1.0 - self.tau) * target_param.data)
+
+    def save(self, path):
+        """Save the model's state"""
+        checkpoint = {
+            'q_network_state_dict': self.q_network.state_dict(),
+            'target_network_state_dict': self.target_network.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'total_steps': self.total_steps,
+            'eps': self.eps,
+            'gamma': self.gamma,
+            'gradient_clip': self.gradient_clip,
+            'double_dqn': self.double_dqn,
+            'device': self.device,
+            'batch_size': self.batch_size,
+            'target_update_freq': self.target_update_freq,
+            'update_freq': self.update_freq,
+            'eps_end': self.eps_end,
+            'eps_decay': self.eps_decay,
+            'tau': self.tau,
+            'buffer_size': self.buffer_size,
+            'per_alpha': self.per_alpha,
+            'per_beta_start': self.per_beta_start,
+            'per_beta_end': self.per_beta_end,
+            'per_beta_steps': self.per_beta_steps,
+            'n_steps': self.n_steps,
+            'v_min': self.v_min,
+            'v_max': self.v_max,
+            'n_atoms': self.n_atoms,
+            'support': self.support.cpu().numpy()  # Save as numpy array
+        }
+        torch.save(checkpoint, path)
+
+    def load(self, path):
+        """Load a saved model"""
+        checkpoint = torch.load(path, map_location=self.device)
+        
+        self.q_network.load_state_dict(checkpoint['q_network_state_dict'])
+        self.target_network.load_state_dict(checkpoint['target_network_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        
+        self.total_steps = checkpoint['total_steps']
+        self.eps = checkpoint['eps']
+        self.gamma = checkpoint['gamma']
+        self.gradient_clip = checkpoint['gradient_clip']
+        self.double_dqn = checkpoint['double_dqn']
+        self.batch_size = checkpoint['batch_size']
+        self.target_update_freq = checkpoint['target_update_freq']
+        self.update_freq = checkpoint['update_freq']
+        self.eps_end = checkpoint['eps_end']
+        self.eps_decay = checkpoint['eps_decay']
+        self.tau = checkpoint['tau']
+        self.n_steps = checkpoint['n_steps']
+        self.v_min = checkpoint['v_min']
+        self.v_max = checkpoint['v_max']
+        self.n_atoms = checkpoint['n_atoms']
+        self.buffer_size = checkpoint['buffer_size']
+        self.per_alpha = checkpoint['per_alpha']
+        self.per_beta_start = checkpoint['per_beta_start']
+        self.per_beta_end = checkpoint['per_beta_end']
+        self.per_beta_steps = checkpoint['per_beta_steps']
+
+        self.support = torch.tensor(checkpoint['support']).to(self.device)
+
+        self._initialize_replay_buffer(
+            size=self.buffer_size,
+            per_alpha=self.per_alpha,
+            per_beta_start=self.per_beta_start,
+            per_beta_end=self.per_beta_end,
+            per_beta_steps=self.per_beta_steps
+        )

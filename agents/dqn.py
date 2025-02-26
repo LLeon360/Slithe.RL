@@ -112,18 +112,27 @@ class DQNAgent(BaseAgent):
         self.double_dqn = double_dqn
         self.total_steps = 0
         self.tau = tau
+        self.buffer_size = buffer_size
+        self.per_alpha = per_alpha
+        self.per_beta_start = per_beta_start
+        self.per_beta_end = per_beta_end
+        self.per_beta_steps = per_beta_steps
 
         # Initialize networks
         self._initialize_model(use_cnn, hidden_dims, cnn_channels, cnn_kernel_sizes, cnn_strides, lr, weight_decay)
 
-        self.replay_buffer = PrioritizedReplayBuffer(
-            size=buffer_size,
+        self._initialize_replay_buffer(buffer_size, per_alpha, per_beta_start, per_beta_end, per_beta_steps)
+      
+    def _initialize_replay_buffer(self, size, per_alpha, per_beta_start, per_beta_end, per_beta_steps):
+        """Initialize replay buffer"""
+        return PrioritizedReplayBuffer(
+            size=size,
             alpha=per_alpha,
             beta_start=per_beta_start,
             beta_end=per_beta_end,
             beta_steps=per_beta_steps
         )
-      
+
     def _initialize_model(self, use_cnn, hidden_dims, cnn_channels, cnn_kernel_sizes, cnn_strides, lr, weight_decay):
         """Common model initialization."""
         act_dim = self.env.action_space.n
@@ -329,7 +338,18 @@ class DQNAgent(BaseAgent):
             'gamma': self.gamma,
             'gradient_clip': self.gradient_clip,
             'double_dqn': self.double_dqn,
-            'device': self.device
+            'device': self.device,
+            'batch_size': self.batch_size,
+            'target_update_freq': self.target_update_freq,
+            'update_freq': self.update_freq,
+            'eps_end': self.eps_end,
+            'eps_decay': self.eps_decay,
+            'tau': self.tau,
+            'buffer_size': self.buffer_size,
+            'per_alpha': self.per_alpha,
+            'per_beta_start': self.per_beta_start,
+            'per_beta_end': self.per_beta_end,
+            'per_beta_steps': self.per_beta_steps
         }
         torch.save(checkpoint, path)
 
@@ -340,9 +360,28 @@ class DQNAgent(BaseAgent):
         self.q_network.load_state_dict(checkpoint['q_network_state_dict'])
         self.target_network.load_state_dict(checkpoint['target_network_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        
+
         self.total_steps = checkpoint['total_steps']
         self.eps = checkpoint['eps']
         self.gamma = checkpoint['gamma']
         self.gradient_clip = checkpoint['gradient_clip']
         self.double_dqn = checkpoint['double_dqn']
+        self.batch_size = checkpoint['batch_size']
+        self.target_update_freq = checkpoint['target_update_freq']
+        self.update_freq = checkpoint['update_freq']
+        self.eps_end = checkpoint['eps_end']
+        self.eps_decay = checkpoint['eps_decay']
+        self.tau = checkpoint['tau']
+        self.buffer_size = checkpoint['buffer_size']
+        self.per_alpha = checkpoint['per_alpha']
+        self.per_beta_start = checkpoint['per_beta_start']
+        self.per_beta_end = checkpoint['per_beta_end']
+        self.per_beta_steps = checkpoint['per_beta_steps']
+
+        self._initialize_replay_buffer(
+            size=self.buffer_size,
+            per_alpha=self.per_alpha,
+            per_beta_start=self.per_beta_start,
+            per_beta_end=self.per_beta_end,
+            per_beta_steps=self.per_beta_steps
+        )
