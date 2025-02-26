@@ -4,7 +4,7 @@ This repository implements reinforcement learning (RL) approaches to play the At
 
 ### Example (Agent is on the Right)
 
-[![Atari Surround RL Demo](https://img.youtube.com/vi/pOTpUfn1w1o/hqdefault.jpg)](https://youtube.com/v/pOTpUfn1w1o)
+[![Atari Surround RL Demo](assets/rainbow_dqn_27500.gif)](https://youtube.com/v/pOTpUfn1w1o)
 
 <em>Rainbow DQN Agent on Right (27.5K games) vs Gymnasium ALE built-in highest difficulty Surround opponent on Left</em> 
 
