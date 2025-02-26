@@ -148,3 +148,43 @@ class ChannelWiseFrameStack(gym.Wrapper):
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
         return np.transpose(obs, (0, 2, 3, 1)).reshape(self.frames * self.channels, self.height, self.width), reward, terminated, truncated, info
+
+class RemoveNoopWrapper(gym.Wrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        # Assume Discrete action space
+        self.action_space = gym.spaces.Discrete(self.env.action_space.n - 1)
+    
+    def step(self, action):
+        # Shift action up by 1 since we removed NOOP (0)
+        # This makes 0->1, 1->2, etc.
+        shifted_action = action + 1
+        return self.env.step(shifted_action)
+    
+class SkipRedundantFramesWrapper(gym.Wrapper):
+    '''
+    An alternative to frame skipping. 
+    
+    I noticed as the game ran longer that bizzarely the games begin skipping more frames
+    Not sure if this is an internal game issue but this wrapper instead will skip frames 
+    where the state does no change and keep actioning with the same action until it does    
+    '''
+    def __init__(self, env):
+        super().__init__(env)
+        self.prev_obs = None
+
+    def reset(self, *args, **kwargs):
+        obs, info = self.env.reset(*args, **kwargs)
+        self.prev_obs = obs
+        return obs, info
+
+    def step(self, action):        
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        # If the state has not changed, keep actioning with the same action
+        # NOTE: this is a little bit hardcoded, but for the surround environment there is a flicker in the top left corner, this doesn't mean state changed so we crop this out when comparing
+        # This indicator honestly, may be a indicator of state change as it seems to flash every time the game actually moves, so future iterations may want to use this as a state change indicator, instead of comparing the states manually
+        top_crop = 5
+        while (not (terminated or truncated)) and np.allclose(obs[top_crop:], self.prev_obs[top_crop:]):
+            obs, reward, terminated, truncated, info = self.env.step(action)
+        self.prev_obs = obs
+        return obs, reward, terminated, truncated, info
