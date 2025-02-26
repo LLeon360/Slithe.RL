@@ -79,9 +79,3 @@ RL Alg implementaitons
 - [ ] Finish Rainbow DQN
     - [ ] Multistep learning
 - [ ] PPO 
-
-# TODO
-
-- [ ] Finish Rainbow DQN
-    - [ ] Multistep learning
-- [ ] PPO 
