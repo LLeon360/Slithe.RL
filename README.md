@@ -45,15 +45,21 @@ video and checkpoint directory will also be created automatically to record epis
 ## Agents
 
 BaseAgent: Abstract base class defining the agent interface
+
 ReinforcePolicyGradientsAgent: REINFORCE policy gradient implementation
+
 DQNAgent: Deep Q-Network with prioritized experience replay
+
 DuelingDQNAgent: Dueling DQN architecture with advantage/value streams
+
 RainbowDQNAgent: Advanced DQN with Rainbow enhancements
 
 ## Models
 
 MLPBackbone: Multi-layer perceptrons for vector-based observations
+
 CNNBackbone: Convolutional networks for image-based observations
+
 NoisyLinear: Noisy network layers for exploration in Rainbow DQN
 
 ## Environment Wrappers
