@@ -33,3 +33,6 @@ video and checkpoint directory will also be created automatically to record epis
 ```sh
 ./setup.sh
 ```
+
+If setup doesn't work due to not automatically activating the conda env, activate it with `conda activate atari` or whatever your env is called and then copy the remaining install commands.
+

@@ -9,7 +9,7 @@ import random
 from agents.agent import BaseAgent
 from models.mlps import MLPBackbone
 from models.cnns import CNNBackbone
-
+import copy
 class PrioritizedReplayBuffer:
     def __init__(self, size, alpha=0.6, beta_start=0.4, beta_end=1.0, beta_steps=100000):
         self.size = size
@@ -136,19 +136,11 @@ class DQNAgent(BaseAgent):
                 kernel_sizes=cnn_kernel_sizes,
                 strides=cnn_strides
             ).to(self.device)
-            self.target_network = CNNBackbone(
-                obs_shape=self.env.observation_space.shape,
-                output_dim=act_dim,
-                hidden_dims=hidden_dims,
-                channels=cnn_channels,
-                kernel_sizes=cnn_kernel_sizes,
-                strides=cnn_strides
-            ).to(self.device)
         else:
             obs_dim = self.env.observation_space.shape[0]
             self.q_network = MLPBackbone(obs_dim, act_dim, hidden_dims=hidden_dims).to(self.device)
-            self.target_network = MLPBackbone(obs_dim, act_dim, hidden_dims=hidden_dims).to(self.device)
         
+        self.target_network = copy.deepcopy(self.q_network).to(self.device)
         self.target_network.load_state_dict(self.q_network.state_dict())
         self.optimizer = optim.AdamW(self.q_network.parameters(), lr=lr, weight_decay=weight_decay)
 
@@ -268,6 +260,13 @@ class DQNAgent(BaseAgent):
             done = terminated or truncated
             total_reward += reward
 
+            # for debugging purposes if the action resulted in done, run inference to print the predicted Q-values
+            if done:
+                with torch.no_grad():
+                    state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+                    q_values = self.q_network(state_tensor)
+                    print(f"Hit done, on final action Predicted Q-values: {q_values}, reward is {reward:.2f}")
+
             # Store transition
             self._store_transition(state, action, reward, next_state, done)
 
@@ -277,6 +276,10 @@ class DQNAgent(BaseAgent):
                 if update_info:
                     for k, v in update_info.items():
                         metrics_accumulator[k].append(v)
+
+            # for sanity, check if state = next_state
+            if np.array_equal(state, next_state):
+                print(f"At steps {episode_steps} state and next_state are equal btw")
 
             state = next_state
 

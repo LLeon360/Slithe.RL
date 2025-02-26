@@ -40,7 +40,8 @@ class CNNBackbone(nn.Module):
                     kernel_size=kernel_size, 
                     stride=stride
                 ),
-                nn.ReLU()
+                nn.ReLU(),
+                # nn.BatchNorm2d(out_channels)
             ])
             in_channels = out_channels
             
