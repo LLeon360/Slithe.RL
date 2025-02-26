@@ -67,5 +67,16 @@ Wrappers for reshaping observations, no-op removal, removing redudant transition
 ./setup.sh
 ```
 
-If setup doesn't work due to not automatically activating the conda env, activate it with `conda activate atari` or whatever your env is called and then copy the remaining install commands.
+⚠️If setup doesn't work due to not automatically activating the conda env, activate it with `conda activate atari` or whatever your env is called and then copy the remaining install commands.
+
+
+# TODO
+
+Multi-Agent RL & Self-Play
+- [ ] Set up [PettingZoo](https://pettingzoo.farama.org/environments/atari/surround/) MARL environment
+
+RL Alg implementaitons
+- [ ] Finish Rainbow DQN
+    - [ ] Multistep learning
+- [ ] PPO 
 
