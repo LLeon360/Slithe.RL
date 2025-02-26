@@ -2,9 +2,11 @@
 
 This repository implements reinforcement learning (RL) approaches to play the Atari game Surround. The goal is to train agents that can effectively learn and play the game using various RL algorithms.
 
-### Example
+### Example (Agent is on the Right)
 
-[![Atari Surround RL Demo](https://img.youtube.com/vi/qyV4fp-DNOs/0.jpg)](https://youtube.com/v/qyV4fp-DNOs)
+[![Atari Surround RL Demo](https://img.youtube.com/vi/pOTpUfn1w1o/hqdefault.jpg)](https://youtube.com/v/pOTpUfn1w1o)
+
+<em>Rainbow DQN Agent on Right (27.5K games) vs Gymnasium ALE built-in highest difficulty Surround opponent on Left</em> 
 
 ## Repository Structure
 ```
