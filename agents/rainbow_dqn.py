@@ -1,4 +1,3 @@
-# agents/rainbow_dqn.py
 from agents.dqn import DQNAgent
 from agents.dqn import PrioritizedReplayBuffer
 from models.cnns import CNNBackbone
@@ -30,7 +29,7 @@ class C51DuelingQNetwork(nn.Module):
             hidden_dims=[]  # No FC layers here, handled by noisy nets
         )
         
-        # Compute feature size analytically to avoid BatchNorm2d issue
+        # Compute feature size analytically 
         input_channels, height, width = obs_shape
         h, w = height, width
         for k, s in zip(cnn_kernel_sizes, cnn_strides):
@@ -295,14 +294,7 @@ class RainbowDQNAgent(DQNAgent):
             steps += 1
             self.total_steps += 1
 
-            if done:
-                with torch.no_grad():
-                    obs_tensor = torch.FloatTensor(observation).unsqueeze(0).to(self.device)
-                    q_dist = self.q_network(obs_tensor)
-                    q_values = (q_dist * self.support).sum(dim=-1)
-                print(f"Hit done, on final action Predicted Q-values: {q_values}, reward is {reward:.2f}")
-
-            # do to inconsistent framerate, making frame skip too high can cause skips on meaningful frames, so frameskip is a bit conservative but that means we need to ignore repeated frames
+            # secondary catch for repeated frames, though this should be handled by the env wrapper SkipRedundantFramesWrapper
             if not np.allclose(observation, next_observation) or done:
                 self._store_transition(observation, action, reward, next_observation, done)
             else:
